@@ -1,0 +1,3 @@
+# jgit-examples
+
+Examples of how to use JGit. Work in progress...
