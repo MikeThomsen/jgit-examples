@@ -52,22 +52,22 @@ class JGitTest {
     }
 
     @Test
-    void testPush() {
+    void testPushPull() {
         def git = createEmptyRepo()
         def commit = { message ->
-            new File(temp, "README.md").write("""
-                # Hello World!
-            """)
-            git.add().addFilepattern("*.md").call()
+            new File(temp, "README.md").write("# Hello World!")
+            git.add().addFilepattern("README.md").call()
             git.commit().setMessage(message).call()
         }
-        commit("First commit")
+        commit("New commit ${Calendar.instance.time}")
         def remote = git.remoteAdd()
         remote.setName("GitHub")
         remote.setUri(new URIish("https://github.com/MikeThomsen/jgit-target"))
         remote.call()
+        def provider = new UsernamePasswordCredentialsProvider(System.getProperty("github.username"), System.getProperty("github.password"))
+        git.pull().setCredentialsProvider(provider).setRemote("GitHub").call()
         git.push().setRemote("GitHub")
-                .setCredentialsProvider(new UsernamePasswordCredentialsProvider(System.getProperty("github.username"), System.getProperty("github.password")))
+                .setCredentialsProvider(provider)
                 .call()
     }
 }
