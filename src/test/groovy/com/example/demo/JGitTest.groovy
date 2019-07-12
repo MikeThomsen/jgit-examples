@@ -3,6 +3,8 @@ package com.example.demo
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.eclipse.jgit.transport.URIish
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 import org.junit.Test
 
 class JGitTest {
@@ -47,5 +49,25 @@ class JGitTest {
         master.each { masterCommits << it }
         assert masterCommits.size() == 1
         assert masterCommits[0].fullMessage == 'First commit'
+    }
+
+    @Test
+    void testPush() {
+        def git = createEmptyRepo()
+        def commit = { message ->
+            new File(temp, "README.md").write("""
+                # Hello World!
+            """)
+            git.add().addFilepattern("*.md").call()
+            git.commit().setMessage(message).call()
+        }
+        commit("First commit")
+        def remote = git.remoteAdd()
+        remote.setName("GitHub")
+        remote.setUri(new URIish("https://github.com/MikeThomsen/jgit-target"))
+        remote.call()
+        git.push().setRemote("GitHub")
+                .setCredentialsProvider(new UsernamePasswordCredentialsProvider(System.getProperty("github.username"), System.getProperty("github.password")))
+                .call()
     }
 }
