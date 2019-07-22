@@ -1,10 +1,13 @@
 package com.example.demo
 
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.api.ListBranchCommand
 import org.eclipse.jgit.lib.Repository
+import org.eclipse.jgit.revwalk.RevCommit
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
 import org.eclipse.jgit.transport.URIish
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+import org.eclipse.jgit.treewalk.TreeWalk
 import org.junit.Test
 
 class JGitTest {
@@ -69,5 +72,43 @@ class JGitTest {
         git.push().setRemote("GitHub")
                 .setCredentialsProvider(provider)
                 .call()
+    }
+
+    @Test
+    void testReadCommitFromBranch() {
+        def git = createEmptyRepo()
+        def commit = { name, message ->
+            new File(temp, name).write("# Hello World!")
+            git.add().addFilepattern(name).call()
+            git.commit().setMessage(message).call()
+        }
+        commit("README.md", "First commit")
+        git.branchCreate().setName("dev").call()
+        git.checkout().setName("dev").call()
+        commit("LICENSE", "Do what thou wilt!")
+        commit("NOTICE", "Nothing to see here, move along.")
+        git.checkout().setName("master").call()
+        def dev = git.branchList().setListMode(ListBranchCommand.ListMode.ALL).call().find { it.name.endsWith("/dev") }
+        assert dev
+        println git.repository.directory
+        List<RevCommit> found = []
+        git.log().add(git.repository.resolve(dev.name)).call().each {
+            println it.fullMessage
+            found << it
+        }
+        assert found.size() == 3
+        assert found[0].fullMessage == "Nothing to see here, move along."
+
+        def treeWalk = new TreeWalk(git.repository)
+        treeWalk.addTree(found[0].tree)
+        treeWalk.setRecursive(true)
+        assert treeWalk.next()
+        def objectId = treeWalk.getObjectId(0)
+        def loader = git.repository.open(objectId)
+        def out = new ByteArrayOutputStream()
+        loader.copyTo(out)
+        out.close()
+        def output = new String(out.toByteArray())
+        assert output == "# Hello World!"
     }
 }
