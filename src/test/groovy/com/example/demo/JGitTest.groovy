@@ -74,6 +74,9 @@ class JGitTest {
                 .call()
     }
 
+    /**
+     * Code inspired by this: https://github.com/centic9/jgit-cookbook/blob/master/src/main/java/org/dstadler/jgit/api/ReadFileFromCommit.java
+     */
     @Test
     void testReadCommitFromBranch() {
         def git = createEmptyRepo()
